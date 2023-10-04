@@ -1,0 +1,845 @@
+import React, { useEffect, useState } from "react";
+import {
+  Autocomplete,
+  Box,
+  Divider,
+  Drawer,
+  Grid,
+  IconButton,
+  InputLabel,
+  Stack,
+  Typography,
+} from "@mui/material";
+import ArrowForwardIosSharpIcon from "@mui/icons-material/ArrowForwardIosSharp";
+import MkButton from "../../../app/assets/theme/MkButton";
+import { useDispatch } from "react-redux";
+import CloseIcon from "@mui/icons-material/Close";
+import { styled, useTheme } from "@mui/material/styles";
+import { useSelector } from "react-redux";
+import MkAutoComplete from "../../../app/assets/theme/MkAutoComplete";
+import { searchAuthor } from "../../../features/author/AuthorApi";
+import { onInitSearchAuthor } from "../../../features/author/AuthorSlice";
+import InputFormComponent from "../../../app/components/Form/InputFormComponent";
+import MkDatePicker from "../../../app/assets/theme/MkDatePicker";
+import { format } from "date-fns";
+import AddBoxIcon from "@mui/icons-material/AddBox";
+import AddExpense from "./AddExpense";
+import { formatMoney } from "../../../app/helper/formatMoney";
+import { DeleteForever, Edit } from "@mui/icons-material";
+import {
+  allBook,
+  ExpensesDelete,
+  GetBookExpenses,
+} from "../../../features/book/BookApi";
+import MuiAccordion from "@mui/material/Accordion";
+import MuiAccordionSummary from "@mui/material/AccordionSummary";
+import MuiAccordionDetails from "@mui/material/AccordionDetails";
+// import FrontImageFile from "./FrontImageFile";
+// import BackImageFile from "./BackImageFile";
+import CoverImageFile from "./CoverImageFile";
+import { imageApi } from "../../../app/hooks";
+import SimpleSelect from "../../../app/components/SimpleSelect";
+import ClearIcon from "@mui/icons-material/Clear";
+import SelectCategoriesFullScreen from "./SelectCategoriesFullScreen";
+import {
+  overwriteCategories,
+  initialSelectCategories,
+} from "./SelectCategoriesFullScreenSlice";
+import {
+  addError,
+  clearError,
+  showAlert,
+  showSuccess,
+} from "../../../app/components/Alert/alertSlice";
+
+const DrawerHeader = styled("div")(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  padding: theme.spacing(0, 1),
+  // necessary for content to be below app bar
+  ...theme.mixins.toolbar,
+  justifyContent: "space-between",
+}));
+
+const Accordion = styled((props) => (
+  <MuiAccordion disableGutters elevation={0} square {...props} />
+))(({ theme }) => ({
+  width: 500,
+  border: `1px solid ${theme.palette.divider}`,
+  "&:not(:last-child)": {
+    borderBottom: 0,
+  },
+  "&:before": {
+    display: "none",
+  },
+  boxShadow: "none",
+}));
+
+const AccordionSummary = styled((props) => (
+  <MuiAccordionSummary
+    expandIcon={<ArrowForwardIosSharpIcon sx={{ fontSize: "0.9rem" }} />}
+    {...props}
+  />
+))(({ theme }) => ({
+  backgroundColor:
+    theme.palette.mode === "dark"
+      ? "rgba(255, 255, 255, .05)"
+      : "rgba(0, 0, 0, .03)",
+  flexDirection: "row-reverse",
+  "& .MuiAccordionSummary-expandIconWrapper.Mui-expanded": {
+    transform: "rotate(90deg)",
+  },
+  "& .MuiAccordionSummary-content": {
+    marginLeft: theme.spacing(1),
+  },
+}));
+
+const AccordionDetails = styled(MuiAccordionDetails)(({ theme }) => ({
+  padding: theme.spacing(2),
+  borderTop: "1px solid rgba(0, 0, 0, .125)",
+}));
+
+export default function ProductDrawer({
+  open: drawerOpen,
+  onClose: drawerOnClose,
+  inputValues = null,
+  action,
+  children,
+}) {
+  const dispatch = useDispatch();
+  const theme = useTheme();
+
+  //accordion
+  const [expanded, setExpanded] = useState("panel1");
+
+  const handleChange = (panel) => (event, newExpanded) => {
+    setExpanded(newExpanded ? panel : false);
+  };
+
+  // extra
+  const { searchAuthorList, loading } = useSelector(
+    (state) => state.SearchAuthorSlice
+  );
+
+  const { companyDetail } = useSelector((state) => state.companyDetail);
+
+  const { expenses, paginationData } = useSelector((state) => state.BookSlice);
+
+  const { genres_dropdown } = useSelector((state) => state.GenreSlice);
+
+  const { editions_dropdown } = useSelector((state) => state.EditionSlice);
+
+  const { releases_dropdown } = useSelector((state) => state.ReleaseSlice);
+
+  //select categories full screen data
+  const { select_categories } = useSelector(
+    (state) => state.SelectCategoryListSlice
+  );
+  // console.log("select_categories", select_categories);
+  // console.log("edition_dropdown", editions_dropdown);
+  // console.log("release_dropdown", releases_dropdown);
+  /* +++++++++++++++++ Product +++++++++++++++++ */
+  const [bookTitle, setBookTitle] = useState(null);
+  const [bookEdition, setBookEdition] = useState(0);
+  const [bookRelease, setBookRelease] = useState(0);
+  const [salePrice, setSalePrice] = useState(null);
+  const [bookAuthors, setBookAuthors] = useState([]);
+  const [bookReviewLink, setBookReviewLink] = useState(null);
+  const [releaseDate, setReleaseDate] = useState(null);
+  const [bookGenre, setBookGenre] = useState([]);
+  const [units, setUnits] = useState(null);
+  const [open, setOpen] = useState(false);
+
+  // image management
+  // const [frontImage, setFrontImage] = useState(null);
+  // const [backImage, setBackImage] = useState(null);
+  const [coverImage, setCoverImage] = useState(null);
+  // console.log("genres_dropdown", genres_dropdown);
+
+  // author search
+  const [options, setOptions] = useState([]);
+
+  const closeNow = () => {
+    // console.log("close now");
+    setBookTitle(null);
+    setBookEdition(0);
+    setBookRelease(0);
+    setSalePrice(null);
+    setBookAuthors([]);
+    drawerOnClose();
+    setReleaseDate(null);
+    // setFrontImage(null);
+    // setBackImage(null);
+    setCoverImage(null);
+    setBookGenre([]);
+    setUnits(null);
+    dispatch(onInitSearchAuthor());
+    dispatch(initialSelectCategories());
+  };
+
+  const authorClick = () => {
+    const data = {
+      publisher_id: companyDetail.id,
+      book_title: bookTitle,
+      // genre_id: genreOption.id,
+      genre_id: [...bookGenre.map((i) => i.id)],
+      edition_id: bookEdition != 0 ? bookEdition : null,
+      release_id: bookRelease ?? 1,
+      sale_price: salePrice,
+      units: units,
+      authors: bookAuthors,
+      review_link: bookReviewLink,
+      book_release_date: releaseDate
+        ? format(new Date(releaseDate), "yyyy-MM-dd")
+        : null,
+      // book_image_front: frontImage?.startsWith("data") ? frontImage : null,
+      // book_image_back: backImage?.startsWith("data") ? backImage : null,
+      cover_image: coverImage?.startsWith("data") ? coverImage : null,
+    };
+    // console.log(data);
+    if (bookAuthors.length > 0 && bookGenre.length > 0) {
+      if ((bookTitle, bookRelease, data["edition_id"])) {
+        // For update
+        if (inputValues?.id) {
+          dispatch(
+            action({
+              data: data,
+              id: inputValues?.id,
+              page: paginationData.page,
+              limit: paginationData.limit,
+            })
+          )
+            .unwrap()
+            .then((result) => {
+              if (result.error || result.errors) {
+                dispatch(addError("Something wrong. Try Again!"));
+              } else {
+                dispatch(showSuccess("Book updated successfully."));
+                dispatch(clearError());
+              }
+              dispatch(showAlert());
+              closeNow();
+              return;
+            });
+        }
+        // For add
+        dispatch(
+          action({
+            data: data,
+            page: paginationData.page,
+            limit: paginationData.limit,
+          })
+        )
+          .unwrap()
+          .then((result) => {
+            console.log("res ", result);
+            if (result.error) {
+              dispatch(addError(result.message));
+            } else if (result.errors) {
+              dispatch(addError("There was an error"));
+            } else {
+              dispatch(showSuccess("Book created successfully"));
+              dispatch(clearError());
+            }
+            dispatch(showAlert());
+            closeNow();
+            return;
+          });
+      } else {
+        dispatch(showAlert());
+        dispatch(addError("Some fields is required"));
+      }
+    } else {
+      dispatch(showAlert());
+      dispatch(addError("Some fields is required"));
+    }
+    // closeNow();
+  };
+
+  const freeSoloProductAdd = (event, newValue) => {
+    dispatch(onInitSearchAuthor());
+    let modify;
+    if (!newValue[newValue.length - 1]?.id && event.target.value) {
+      modify = [
+        ...newValue.slice(0, newValue.length - 1),
+        { name: newValue[newValue.length - 1] },
+      ];
+      console.log(modify);
+      setBookAuthors(modify);
+      return;
+    }
+    setBookAuthors(newValue);
+  };
+
+  const deleteExpense = (id) => {
+    dispatch(
+      ExpensesDelete({
+        id: id,
+        book_id: inputValues.id,
+      })
+    )
+      .unwrap()
+      .then((result) => {
+        console.log(result);
+        if (!result.error) {
+          console.log("unwrap");
+          dispatch(GetBookExpenses({ id: inputValues?.id }));
+          dispatch(
+            allBook({
+              id: companyDetail?.id,
+              page: paginationData.page,
+              limit: paginationData.limit,
+              book_title: "",
+              author_name: "",
+              released_year: "",
+              genre: "",
+            })
+          );
+        }
+      });
+  };
+  /* ----------------------------------------------------  */
+
+  /* +++++++++++++++++ This will set up default value +++++++++++++++++ */
+
+  useEffect(() => {
+    if (inputValues) {
+      setBookTitle(inputValues.book_title);
+      setBookEdition(inputValues?.edition_id);
+      setBookRelease(inputValues.release_id);
+      setSalePrice(inputValues.sale_price);
+      setBookAuthors(inputValues.authors);
+      setBookReviewLink(inputValues.review_link);
+      setReleaseDate(inputValues.book_release_date);
+      setUnits(inputValues.units);
+      // setFrontImage(`${imageApi}${inputValues.book_image_front}`);
+      // setBackImage(`${imageApi}${inputValues.book_image_back}`);
+      setCoverImage(`${imageApi}${inputValues.cover_image}`);
+      setExpanded("panel2");
+      setBookGenre(inputValues?.genres);
+      dispatch(GetBookExpenses({ id: inputValues.id }));
+    }
+  }, [drawerOpen]);
+
+  /* --------------------------------------------  */
+
+  // search author set up value
+  useEffect(() => {
+    if (loading === false) {
+      setOptions([...searchAuthorList]);
+    }
+  }, [loading, searchAuthorList]);
+
+  useEffect(() => {
+    setBookGenre(select_categories);
+  }, [select_categories]);
+
+  return (
+    <div>
+      {children}
+      <Drawer anchor="right" open={drawerOpen} onClose={closeNow}>
+        <DrawerHeader
+          sx={{
+            position: "sticky",
+            top: 0,
+            borderBottom: "0.2px solid rgba(0, 0, 0, 0.12)",
+            background: "#fff",
+            zIndex: 1000,
+          }}
+        >
+          <IconButton onClick={closeNow}>
+            <CloseIcon />
+          </IconButton>
+
+          {/* here is as your desire */}
+
+          <Typography variant="subtitle2" sx={{ marginRight: "40px" }}>
+            {inputValues?.book_title
+              ? `${inputValues?.book_title} `
+              : "Add New Book"}
+          </Typography>
+
+          {/* --------------------------------------------  */}
+        </DrawerHeader>
+        <Accordion
+          expanded={expanded === "panel1"}
+          onChange={handleChange("panel1")}
+        >
+          <AccordionSummary aria-controls="panel1d-content" id="panel1d-header">
+            <Typography>
+              {inputValues ? `Update ${inputValues.book_title}` : "New Book"}
+            </Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            {/* <Divider /> */}
+            <Box
+              sx={{
+                width: 450,
+                // overflow: 'hidden',
+              }}
+            >
+              {/* here is as your desire */}
+
+              <Stack
+                direction="column"
+                spacing={2}
+                justifyContent="center"
+                // sx={{padding: 5}}
+              >
+                {/* <Stack
+                  direction="row"
+                  alignItems={"center"}
+                  sx={{ flex: "1 1 100%" }}
+                >
+                  <Box sx={{ width: "200px", marginLeft: "20px" }}>
+                    <FrontImageFile
+                      frontImageData={frontImage}
+                      onChange={(data) => setFrontImage(data)}
+                    />
+                    <Typography variant="span" mt={3}>
+                      Front Image
+                    </Typography>
+                  </Box>
+
+                  <Box sx={{ width: "200px", marginLeft: "20px" }}>
+                    <BackImageFile
+                      backImageData={backImage}
+                      onChange={(data) => setBackImage(data)}
+                    />
+                    <Typography variant="span" mt={3}>
+                      Back Image
+                    </Typography>
+                  </Box>
+                </Stack> */}
+                <Stack
+                  direction="row"
+                  alignItems={"center"}
+                  justifyContent={"center"}
+                  sx={{ flex: "1 1 100%" }}
+                >
+                  <Box sx={{ width: "200px", marginLeft: "20px" }}>
+                    <InputLabel sx={{ ml: 6, fontSize: "14.5px", p: 1 }}>
+                      Cover Photo
+                    </InputLabel>
+                    <CoverImageFile
+                      coverImageData={coverImage}
+                      onChange={(data) => setCoverImage(data)}
+                    />
+                  </Box>
+                </Stack>
+
+                <Box sx={{ height: 65 }}>
+                  <InputFormComponent
+                    value={bookTitle}
+                    onChange={(e) => setBookTitle(e.currentTarget.value)}
+                    label="Book Title"
+                    name="book_title"
+                    placeholder="Enter Book Title"
+                    focus={true}
+                    required
+                  />
+                </Box>
+
+                <Grid item xs={12} md={6}>
+                  <InputLabel sx={{ mb: 1, fontSize: "14.5px" }}>
+                    Select Genres
+                  </InputLabel>
+
+                  <MkAutoComplete
+                    multiple
+                    name="genres"
+                    fullWidth
+                    placeholder="Choose Genres"
+                    options={genres_dropdown}
+                    isOptionEqualToValue={(option, value) =>
+                      option.id === value.id
+                    }
+                    getOptionLabel={(option) => option.name}
+                    onOpen={() => {
+                      setOpen(true);
+                      dispatch(
+                        overwriteCategories(
+                          bookGenre.map((i) => {
+                            return {
+                              ...i,
+                              related_category_id: i.id,
+                            };
+                          })
+                        )
+                      );
+                    }}
+                    onChange={(event, newValue) => {
+                      setBookGenre(newValue);
+                      dispatch(overwriteCategories(newValue));
+                    }}
+                    value={bookGenre}
+                  />
+                </Grid>
+
+                <SelectCategoriesFullScreen
+                  open={open}
+                  close={() => setOpen(false)}
+                  options={genres_dropdown}
+                  inputValues={bookGenre}
+                />
+
+                <Stack
+                  direction="row"
+                  alignItems={"center"}
+                  justifyContent={"space-between"}
+                  sx={{ flex: "1 1 100%" }}
+                >
+                  <Box item xs={12} md={6}>
+                    <InputLabel
+                      htmlFor="edition_select"
+                      sx={{ fontSize: "14.5px" }}
+                    >
+                      Edition
+                    </InputLabel>
+                    <SimpleSelect
+                      id="edition_id"
+                      name="edition_select"
+                      autoFocus={false}
+                      options={[
+                        { id: 0, name: "Choose Edition .. " },
+                        ...editions_dropdown,
+                      ]}
+                      value={bookEdition}
+                      onChange={(e) => setBookEdition(e.target.value)}
+                      getOptionLabel="name"
+                      endAdornment={
+                        <IconButton
+                          sx={{
+                            visibility: bookEdition ? "visible" : "hidden",
+                          }}
+                          onClick={() => {
+                            setBookEdition(0);
+                          }}
+                        >
+                          <ClearIcon
+                            sx={{
+                              fontSize: "14.5px",
+                              marginRight: "3px",
+                            }}
+                          />
+                        </IconButton>
+                      }
+                    />
+                  </Box>
+
+                  {/* <Box item xs={12} md={6}>
+                    <InputLabel
+                      htmlFor="release_select"
+                      sx={{ fontSize: "14.5px" }}
+                    >
+                      Release
+                    </InputLabel>
+                    <SimpleSelect
+                      id="release_id"
+                      name="release_select"
+                      autoFocus={false}
+                      options={[
+                        { id: 0, name: "Choose Release .. " },
+                        ...releases_dropdown,
+                      ]}
+                      value={bookRelease}
+                      onChange={(e) => {
+                        setBookRelease(e.target.value);
+                      }}
+                      getOptionLabel="name"
+                      endAdornment={
+                        <IconButton
+                          sx={{
+                            visibility: bookRelease ? "visible" : "hidden",
+                          }}
+                          onClick={() => {
+                            setBookRelease(0);
+                          }}
+                        >
+                          <ClearIcon
+                            sx={{
+                              fontSize: "14.5px",
+                              marginRight: "3px",
+                            }}
+                          />
+                        </IconButton>
+                      }
+                    />
+                  </Box> */}
+                  <Box item xs={12} md={6}>
+                    <InputFormComponent
+                      type="number"
+                      value={bookRelease}
+                      onChange={(e) => setBookRelease(e.currentTarget.value)}
+                      label="Release"
+                      name="book_release"
+                      placeholder="Enter Book Release"
+                      onWheel={() => document.activeElement.blur()}
+                    />
+                  </Box>
+                </Stack>
+
+                <Box>
+                  <InputLabel sx={{ fontSize: "14.5px" }}>
+                    Search Author
+                  </InputLabel>
+                  <MkAutoComplete
+                    multiple
+                    freeSolo
+                    name="author"
+                    fullWidth={true}
+                    placeholder="Typing Author Name"
+                    options={options}
+                    // filter Options return the data from server
+                    // because we filter from the server
+                    filterOptions={(option, state) => {
+                      return options;
+                    }}
+                    filterSelectedOptions={true}
+                    getOptionLabel={(option) => {
+                      return option?.name;
+                    }}
+                    onChange={(event, newValue) => {
+                      freeSoloProductAdd(event, newValue);
+                    }}
+                    onTextChange={(e) =>
+                      dispatch(
+                        searchAuthor({
+                          name: e.target.value || null,
+                        })
+                      )
+                    }
+                    value={bookAuthors || null}
+                  />
+                </Box>
+
+                <Box sx={{ height: 65 }}>
+                  <InputLabel sx={{ fontSize: "14.5px" }}>
+                    Book Release Date
+                  </InputLabel>
+                  <MkDatePicker
+                    fullWidth
+                    value={releaseDate}
+                    inputFormat="dd/MM/yyyy"
+                    onChange={(newValue) => {
+                      setReleaseDate(newValue);
+                    }}
+                    placeholder="Choose Release Date"
+                  />
+                </Box>
+
+                <Box sx={{ height: 65 }}>
+                  <InputFormComponent
+                    type="number"
+                    value={salePrice}
+                    onChange={(e) => setSalePrice(e.currentTarget.value)}
+                    label="Book Sale Price"
+                    name="book_sale_price"
+                    placeholder="Enter Book Sale Price"
+                    onWheel={() => document.activeElement.blur()}
+                  />
+                </Box>
+
+                <Box sx={{ height: 65 }}>
+                  <InputFormComponent
+                    type="number"
+                    value={units}
+                    onChange={(e) => setUnits(e.currentTarget.value)}
+                    label="Units"
+                    name="units"
+                    placeholder="Enter Units"
+                    onWheel={() => document.activeElement.blur()}
+                  />
+                </Box>
+
+                <Box sx={{ height: 65 }}>
+                  <InputFormComponent
+                    value={bookReviewLink}
+                    onChange={(e) => setBookReviewLink(e.currentTarget.value)}
+                    label="Book Review Link"
+                    name="book_review_link"
+                    placeholder="Enter Book Review Link"
+                  />
+                </Box>
+
+                <MkButton
+                  mkcolor={`linear-gradient(310deg, #2152ff, #02c6f3)`}
+                  size="small"
+                  onClick={authorClick}
+                >
+                  {inputValues?.book_title ? `Update` : "Add"}
+                </MkButton>
+              </Stack>
+
+              {/* --------------------------------------------  */}
+            </Box>
+          </AccordionDetails>
+        </Accordion>
+
+        {/* expense */}
+        <Accordion
+          expanded={expanded === "panel2"}
+          onChange={handleChange("panel2")}
+          sx={{ visibility: inputValues ? "" : "hidden" }}
+        >
+          <AccordionSummary aria-controls="panel2d-content" id="panel2d-header">
+            <Typography>Expense Costs</Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Box
+              sx={{
+                with: 450,
+                padding: "5px 5px 20px 5px",
+              }}
+            >
+              <Stack
+                direction="row"
+                spacing={2}
+                justifyContent="space-between"
+                alignItems={"center"}
+              >
+                <Typography sx={{ fontSize: "1.2rem" }}>
+                  Expense Costs
+                </Typography>
+                <AddExpense
+                  publisher_id={companyDetail?.id}
+                  book_id={inputValues?.id}
+                />
+              </Stack>
+              <Stack
+                direction="column"
+                spacing={2}
+                sx={{ padding: "20px 0px" }}
+              >
+                <Typography
+                  sx={{
+                    visibility:
+                      expenses?.expenses?.length === 0 ? "" : "hidden",
+                    fontSize: "1.4rem",
+                    textAlign: "center",
+                  }}
+                >
+                  There is no expense costs
+                </Typography>
+                <Stack direction="column" sx={{ padding: "0 5px" }}>
+                  {expenses?.expenses?.map((item, index) => {
+                    return (
+                      <Grid
+                        container
+                        key={item.id}
+                        sx={{
+                          background: index % 2 == 0 ? "grey" : "black",
+                          padding: "5px 5px 0px 5px",
+                          borderBottom:
+                            expenses?.expenses[expenses?.expenses.length - 1]
+                              .id === item.id
+                              ? ""
+                              : "2px solid #fff",
+                        }}
+                      >
+                        {/* amount expense category */}
+                        <Grid item xs={8}>
+                          <Stack direction={"column"}>
+                            <Typography
+                              color={"#fff"}
+                              fontSize="1.1rem"
+                              fontWeight={"bold"}
+                            >
+                              {item.expense_category?.name ?? item.description}
+                            </Typography>
+                          </Stack>
+                        </Grid>
+                        <Grid
+                          item
+                          xs={4}
+                          sx={{
+                            textAlign: "end",
+                          }}
+                        >
+                          <Typography color={"#fff"} fontSize="1.2rem">
+                            {formatMoney(item.amount)}
+                            Ks
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={6}>
+                          {item.description ? (
+                            <Typography color={"#fff"} fontSize="0.9rem">
+                              {item.description}
+                            </Typography>
+                          ) : null}
+                          <Typography color={"#fff"} fontSize="0.9rem">
+                            {format(new Date(item.expense_date), "dd-MMMM-yyy")}
+                          </Typography>
+                        </Grid>
+                        {/* delete button */}
+                        <Grid item xs={6}>
+                          <Stack
+                            direction={"row"}
+                            justifyContent="end"
+                            sx={{
+                              padding: "10px 0px",
+                            }}
+                            gap={2}
+                          >
+                            <AddExpense
+                              publisher_id={companyDetail?.id}
+                              book_id={inputValues?.id}
+                              inputValues={item}
+                            />
+                            <DeleteForever
+                              sx={{
+                                color: "red",
+                                background: "#fff",
+                                cursor: "pointer",
+                                borderRadius: "100%",
+                                width: "30px",
+                                height: "30px",
+                                padding: "5px",
+                              }}
+                              onClick={() => {
+                                deleteExpense(item.id);
+                              }}
+                            />
+                          </Stack>
+                        </Grid>
+                      </Grid>
+                    );
+                  })}
+
+                  {/* total */}
+                  <Grid
+                    container
+                    sx={{
+                      background: "rgba(255,255,255,0.2)",
+                      padding: "5px",
+                      border: "1px solid",
+                      visibility:
+                        expenses?.expenses?.length > 0 ? "" : "hidden",
+                    }}
+                  >
+                    <Grid item xs={8}>
+                      <Stack direction={"column"}>
+                        <Typography
+                          // color={'#fff'}
+                          fontSize="1.2rem"
+                        >
+                          Total
+                        </Typography>
+                      </Stack>
+                    </Grid>
+                    <Grid item xs={4} sx={{ textAlign: "end" }}>
+                      <Typography fontSize="1.2rem">
+                        {formatMoney(expenses?.total_expenses)}
+                        Ks
+                      </Typography>
+                    </Grid>
+                  </Grid>
+                </Stack>
+              </Stack>
+            </Box>
+          </AccordionDetails>
+        </Accordion>
+      </Drawer>
+    </div>
+  );
+}

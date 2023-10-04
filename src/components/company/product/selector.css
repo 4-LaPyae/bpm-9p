@@ -1,0 +1,16 @@
+.MuiChip-root.clicked-categories {
+    background-color: #2b99ffdb;
+    color: black;
+}
+.MuiChip-root.MuiChip-clickable.clicked-categories:hover {
+    background-color: #2b99ffdb !important;
+    color: black;
+}
+
+.MuiChip-root {
+    color: black;
+}
+
+.MuiGrid-root.MuiGrid-item.hidden{
+   display: none;
+}

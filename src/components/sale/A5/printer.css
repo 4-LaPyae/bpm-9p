@@ -1,0 +1,50 @@
+.page-containerA5 {
+    width: 148mm; /* A5 width */
+    height: 209.5mm; /* A5 height */
+    margin: 0 auto; /* Center the page horizontally */
+    page-break-after: always; /* Add page break after each page */
+    /* break-inside: auto; */
+}
+
+.print-containerA5 {
+    width: 100%; /* Full width of the page */
+    height: 100%;
+    page-break-before: always;
+    /* background-color: red; */
+    /* overflow: hidden; */
+    /* overflow-y: auto; */
+}
+
+.page-containerA4 {
+    width: 210mm; /* A5 width */
+    height: 297mm; /* A5 height */
+    margin: 0 auto; /* Center the page horizontally */
+    page-break-after: always; /* Add page break after each page */
+    /* break-inside: auto; */
+}
+
+.print-containerA4 {
+    width: 100%; /* Full width of the page */
+    height: 100%;
+    page-break-before: always;
+    /* background-color: red; */
+    /* overflow: hidden; */
+    /* overflow-y: auto; */
+}
+
+.page-containerPOS {
+    width: 80mm; /* A5 width */
+    height: 210mm; /* A5 height */
+    margin: 0 auto; /* Center the page horizontally */
+    page-break-after: always; /* Add page break after each page */
+    /* break-inside: auto; */
+}
+
+.print-containerPOS {
+    width: 100%; /* Full width of the page */
+    height: 100%;
+    page-break-before: always;
+    /* background-color: red; */
+    /* overflow: hidden; */
+    /* overflow-y: auto; */
+}

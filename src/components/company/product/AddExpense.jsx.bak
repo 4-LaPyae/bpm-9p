@@ -1,0 +1,262 @@
+import { useEffect, useState } from "react";
+import { useDispatch } from "react-redux";
+
+import {
+  Box,
+  Input,
+  Stack,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  Avatar,
+  InputLabel,
+  Typography,
+  Grid,
+} from "@mui/material";
+import { Add, Edit } from "@mui/icons-material";
+import MkAutoComplete from "../../../app/assets/theme/MkAutoComplete";
+import { useSelector } from "react-redux";
+import InputFormComponent from "../../../app/components/Form/InputFormComponent";
+import MkDatePicker from "../../../app/assets/theme/MkDatePicker";
+import { format } from "date-fns";
+import {
+  allBook,
+  ExpensesAdd,
+  ExpensesUpdate,
+  GetBookExpenses,
+} from "../../../features/book/BookApi";
+
+export default function AddExpense({
+  publisher_id,
+  book_id,
+  inputValues = null,
+  popupOpen,
+}) {
+  const dispatch = useDispatch();
+  const { expense_categories_dropdown } = useSelector(
+    (state) => state.ExpenseCategorySlice
+  );
+  const { paginationData } = useSelector((state) => state.BookSlice);
+  const [expenses, setExpense] = useState(null);
+  const [amount, setAmount] = useState(null);
+  const [expenseDate, setExpenseDate] = useState(null);
+  const [description, setDescription] = useState(null);
+  // const [note, setNote] = useState(null);
+  const [open, setOpen] = useState(false);
+
+  const handleClickOpen = () => {
+    setOpen(true);
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+    setExpense(null);
+    setAmount(null);
+    // setNote(null);
+    setExpenseDate(null);
+    setDescription(null);
+  };
+
+  const handleAdd = (event) => {
+    event.preventDefault();
+    if (expenseDate && amount) {
+      const formData = new FormData(event.currentTarget);
+      formData.append("expense_category_id", expenses.id);
+      formData.append(
+        "expense_date",
+        format(new Date(expenseDate), "yyyy-MM-dd")
+      );
+      formData.append("publisher_id", publisher_id);
+      formData.append("book_id", book_id);
+      if (expenses.id !== 0) {
+        formData.delete("description");
+      }
+      // return;
+      dispatch(
+        inputValues
+          ? ExpensesUpdate({
+              data: formData,
+              id: inputValues?.id,
+            })
+          : ExpensesAdd({ data: formData })
+      )
+        .unwrap()
+        .then((result) => {
+          if (result.expense) {
+            dispatch(GetBookExpenses({ id: book_id }));
+            dispatch(
+              allBook({
+                id: publisher_id,
+                page: paginationData.page,
+                limit: paginationData.limit,
+                book_title: "",
+                author_name: "",
+                released_year: "",
+                genre: "",
+              })
+            );
+          }
+        });
+      //close the model box
+      handleClose();
+    }
+  };
+
+  useEffect(() => {
+    if (inputValues) {
+      setAmount(inputValues.amount);
+      // setNote(inputValues.note);
+      setExpenseDate(inputValues.expense_date);
+      setDescription(inputValues.description);
+      setExpense(
+        inputValues.expense_category ?? {
+          id: inputValues.expense_category_id,
+          name: "Other",
+        }
+      );
+    }
+  }, [open]);
+
+  return (
+    <>
+      {inputValues ? (
+        <Edit
+          sx={{
+            color: "green",
+            background: "#fff",
+            cursor: "pointer",
+            borderRadius: "100%",
+            width: "30px",
+            height: "30px",
+            padding: "5px",
+          }}
+          onClick={handleClickOpen}
+        />
+      ) : (
+        <Button startIcon={<Add />} onClick={handleClickOpen}>
+          Add
+        </Button>
+      )}
+      <Dialog
+        open={open}
+        onClose={handleClose}
+        maxWidth="md"
+        component="form"
+        fullWidth={true}
+        sx={{ height: 700 }}
+        onSubmit={handleAdd}
+      >
+        <DialogContent>
+          <Stack direction="column" justifyContent="space-between">
+            <DialogContentText
+              sx={{
+                padding: "10px 0px 30px 0px ",
+                fontSize: "1.2rem",
+                fontWeight: "bold",
+              }}
+            >
+              {inputValues ? "Update" : "Add New"}
+              Expense Cost
+            </DialogContentText>
+            <Box sx={{ padding: "0px 0px 90px 0px" }}>
+              <Grid
+                container
+                justifyContent={"space-between"}
+                alignItems="center"
+                rowSpacing={2}
+              >
+                <Grid item xs={5.8}>
+                  <InputLabel
+                    htmlFor="contained-button-file-banner"
+                    sx={{ fontSize: "14.5px" }}
+                  >
+                    Choose Expenses
+                  </InputLabel>
+                  <MkAutoComplete
+                    fullWidth={true}
+                    options={[
+                      { id: 0, name: "Other" },
+                      ...expense_categories_dropdown,
+                    ]}
+                    placeholder="Select Expense"
+                    getOptionLabel={(option) => option?.name ?? option}
+                    isOptionEqualToValue={(option, value) =>
+                      option.id === value.id
+                    }
+                    name="expenses_category"
+                    onChange={(event, newValue) => {
+                      setExpense(newValue);
+                    }}
+                    value={expenses}
+                  />
+                </Grid>
+                <Grid item xs={5.8}>
+                  <InputFormComponent
+                    type="number"
+                    value={amount}
+                    onChange={(e) => setAmount(e.currentTarget.value)}
+                    label="Expense Amount"
+                    name="amount"
+                    placeholder="Enter Expense Amount"
+                    required
+                  />
+                </Grid>
+                <Grid item xs={5.8}>
+                  <InputLabel sx={{ fontSize: "14.5px" }}>
+                    Expenses Date
+                  </InputLabel>
+                  <MkDatePicker
+                    fullWidth
+                    value={expenseDate}
+                    onChange={(newValue) => {
+                      setExpenseDate(newValue);
+                    }}
+                  />
+                </Grid>
+                {/* <Grid item xs={5.8}>
+                                    <InputFormComponent
+                                        multiline={true}
+                                        rows={2}
+                                        value={note}
+                                        onChange={(e) =>
+                                            setNote(
+                                                e.currentTarget.value
+                                            )
+                                        }
+                                        label="Expense Note"
+                                        name="note"
+                                        placeholder="Enter Expense Note"
+                                    />
+                                </Grid> */}
+                <Grid
+                  item
+                  xs={10}
+                  sx={{
+                    visibility:
+                      expenses?.id === 0 && expenses !== null ? "" : "hidden",
+                  }}
+                >
+                  <InputFormComponent
+                    multiline={true}
+                    rows={2}
+                    value={description}
+                    onChange={(e) => setDescription(e.currentTarget.value)}
+                    label="Other Description"
+                    name="description"
+                    placeholder="Enter Description"
+                  />
+                </Grid>
+              </Grid>
+            </Box>
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ padding: "10px 35px" }}>
+          <Button onClick={handleClose}>Cancel</Button>
+          <Button type="submit">{inputValues ? "Update" : "Add"}</Button>
+        </DialogActions>
+      </Dialog>
+    </>
+  );
+}

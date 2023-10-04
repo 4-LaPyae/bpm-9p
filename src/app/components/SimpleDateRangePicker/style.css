@@ -1,0 +1,53 @@
+.rdrStaticRange{
+    background-color: black;
+    color: white;
+    width: 100%;
+    height: 85px;
+}
+
+.rdrStaticRangeLabel{
+    line-height: 30px;
+    font-size: 15px;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.rdrStaticRange:hover .rdrStaticRangeLabel,.rdrStaticRange:focus .rdrStaticRangeLabel{
+    color: black;
+}
+
+.rdrDateDisplayItemActive input{
+    color: black;
+}
+
+.rdrDateDisplayItem input{
+    color: #514e4e;
+}
+.rdrInputRanges{
+    display: none;
+}
+.rdrDefinedRangesWrapper{
+    width: 150px;
+    background-color: black;
+}
+.rdrDateDisplayWrapper{
+    background-color: black;
+}
+.rdrCalendarWrapper{
+    background-color: black;
+    font-size: 15px;
+    color: #fff;
+}
+.rdrDayNumber span{
+    color: #514e4e;
+}
+
+.rdrMonthAndYearPickers select{
+    color: #fff;
+}
+.rdrDayStartPreview, .rdrDayInPreview, .rdrDayEndPreview{
+    border: none;
+}
